@@ -1,4 +1,4 @@
-package com.example
+package cz.krystofrezac.tollchecker
 
 import com.example.plugins.*
 import io.ktor.client.request.*
