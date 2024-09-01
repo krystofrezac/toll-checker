@@ -1,6 +1,5 @@
 package cz.krystofrezac.tollchecker.views
 
-import kotlinx.html.H1
 import kotlinx.html.body
 import kotlinx.html.button
 import kotlinx.html.form

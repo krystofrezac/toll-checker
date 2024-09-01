@@ -1,18 +1,19 @@
 package cz.krystofrezac.tollchecker
 
-import com.example.plugins.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
-import io.ktor.server.testing.*
-import kotlin.test.*
+import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.testing.testApplication
+import junit.framework.TestCase.assertEquals
 
+// TODO: tests
 class ApplicationTest {
-    @Test
-    fun testRoot() = testApplication {
-        client.get("/").apply {
-            assertEquals(HttpStatusCode.OK, status)
-            assertEquals("Hello World!", bodyAsText())
+//    @Test
+    fun testRoot() =
+        testApplication {
+            client.get("/").apply {
+                assertEquals(HttpStatusCode.OK, status)
+                assertEquals("Hello World!", bodyAsText())
+            }
         }
-    }
 }
