@@ -14,9 +14,6 @@ plugins {
     id("org.jlleitschuh.gradle.ktlint") version "12.1.1"
 }
 
-group = "com.example"
-version = "0.0.1"
-
 application {
     mainClass.set("io.ktor.server.netty.EngineMain")
 

@@ -16,11 +16,13 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.datetime.Instant
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.json.Json
+import java.time.LocalDateTime
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 class EdalniceClientImpl : EdalniceClient {
-    private val logger = KotlinLogging.logger {}
-
     private val client =
         HttpClient(Java) {
             install(Resources)
@@ -35,22 +37,25 @@ class EdalniceClientImpl : EdalniceClient {
             expectSuccess = true
         }
 
-    override suspend fun getIsTollValid(licensePlate: String): Boolean {
-        // TODO: auth plugin?
-        val response =
-            client.submitForm(
-                url = "https://auth.edalnice.cz/auth/connect/token",
-                formParameters =
-                    parameters {
-                        append("grant_type", "client_credentials")
-                        append("scope", "eshop.api eshoppayment.api")
-                    },
-            ) {
-                headers.append(HttpHeaders.Authorization, "Basic ZXNob3AuY2xpZW50OjVxejNYUXVBbV9fYkpVZ0FEVEN5UCo=")
-            }
+    private var accessToken: TokenResponse? = null
 
-        val accessToken = response.body<TokenResponse>().accessToken
-        logger.info { "accessToken [$accessToken]" }
+    override suspend fun getIsTollValid(licensePlate: String): Boolean {
+        if (accessToken == null || accessToken!!.expiryDate.isBefore(LocalDateTime.now())) {
+            val response =
+                client.submitForm(
+                    url = "https://auth.edalnice.cz/auth/connect/token",
+                    formParameters =
+                        parameters {
+                            append("grant_type", "client_credentials")
+                            append("scope", "eshop.api eshoppayment.api")
+                        },
+                ) {
+                    headers.append(HttpHeaders.Authorization, "Basic ZXNob3AuY2xpZW50OjVxejNYUXVBbV9fYkpVZ0FEVEN5UCo=")
+                }
+
+            accessToken = response.body<TokenResponse>()
+            logger.info { "accessToken [$accessToken]" }
+        }
 
         val url =
             URLBuilder(
@@ -61,7 +66,7 @@ class EdalniceClientImpl : EdalniceClient {
             ).buildString()
         val res =
             client.get(url) {
-                headers.append(HttpHeaders.Authorization, "Bearer $accessToken")
+                headers.append(HttpHeaders.Authorization, "Bearer ${accessToken?.accessToken}")
                 headers.append(HttpHeaders.ContentType, "application/json,text/json")
             }
         val body = res.body<CheckLicensePlateResponse>()
@@ -74,7 +79,12 @@ class EdalniceClientImpl : EdalniceClient {
     private class TokenResponse(
         @SerialName("access_token")
         val accessToken: String,
-    )
+        @SerialName("expires_in")
+        val expiresIn: Int,
+    ) {
+        @Transient
+        var expiryDate = LocalDateTime.now().plus(expiresIn.seconds.toJavaDuration())
+    }
 
     @Serializable
     private class CheckLicensePlateResponse(
@@ -92,5 +102,7 @@ class EdalniceClientImpl : EdalniceClient {
     companion object {
         // TODO: configuration
         const val CZ_COUNTRY_CODE = "3906ba89-153c-4038-8e36-0ca1deb76076"
+
+        private val logger = KotlinLogging.logger {}
     }
 }
